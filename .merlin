@@ -1,0 +1,9 @@
+S .
+B _build
+
+PKG core
+PKG lwt
+PKG lwt.unix
+PKG cohttp
+PKG cohttp.lwt
+PKG pcre

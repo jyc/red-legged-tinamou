@@ -1,0 +1,4 @@
+#!/bin/bash
+
+./build route.d.byte
+./build planner.d.byte

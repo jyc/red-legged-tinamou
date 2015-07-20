@@ -1,0 +1,5 @@
+true: package(lwt), package(lwt.unix), \
+    package(cohttp), package(cohttp.lwt), \
+    package(pcre), \
+    package(oUnit), package(pa_ounit), \
+    thread, safe_string

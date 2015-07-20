@@ -1,0 +1,8 @@
+(* See also build-debug *)
+
+#require "pcre";;
+#require "lwt";;
+
+#directory "_build";;
+#load "route.d.cmo";;
+#load "planner.d.cmo";;
