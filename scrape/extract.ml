@@ -24,6 +24,35 @@ type raw_data = {
   times : string list list
 }
 
+let fold_data els =
+  els
+  |> List.fold_left
+    (fun a l ->
+       match l with
+       | `El (_, [`Data x]) -> x :: a
+       | _ -> a)
+    []
+  |> List.rev
+
+let ampm_rex = Pcre.regexp "([0-9]+):([0-9]+)\\s*(AM|PM)"
+
+let mil_of_ampm s = 
+  let m = Pcre.exec ~rex:ampm_rex s in
+  match Pcre.get_substrings m ~full_match:false with
+  | [| hs; ms; ps |] -> 
+    let h = int_of_string hs in
+    let m = int_of_string ms in
+    let hoff =
+      (* TCAT seems to use 12:00 PM for noon *)
+      match ps with
+      | "AM" when h = 12 -> -12
+      | "PM" when h = 12 -> 12
+      | "AM" -> 0
+      | "PM" -> 12
+      | _ -> failwith (Printf.sprintf "Unrecognized period: %s" ps)
+    in Printf.sprintf "%02d:%02d" (h + hoff) m
+  | _ -> failwith "Failed to parse time, expected e.g. 1:37 AM"
+
 let parse_table x =
   let route =
     match extract_tag "h5" x with
@@ -32,29 +61,14 @@ let parse_table x =
   in
   match extract_tags "tr" x with
   | _ :: stop_els :: _ :: [] :: rest_els ->
-    let stops =
-      List.fold_left
-        (fun a l ->
-           match l with
-           | `El (_, [`Data x]) -> x :: a
-           | _ -> a)
-        [] stop_els
-      |> List.rev
-    in
+    let stops = fold_data stop_els in
     let times =
-      List.fold_left
-        (fun a l ->
-           (List.fold_left
-              (fun a' l' ->
-                 match l' with
-                 | `El (_, [`Data x]) -> x :: a'
-                 | _ -> a')
-              [] l
-            |> List.rev) :: a)
-        [] rest_els
+      rest_els
+      |> List.fold_left
+        (fun a l -> (fold_data l |> List.map mil_of_ampm) :: a)
+        []
       |> List.rev
-    in
-    {route; stops; times}
+    in {route; stops; times}
   | _ -> failwith "Failed to find expected trs (stop names and stops)."
 
 let validate {route = _; stops; times} =
@@ -72,16 +86,22 @@ let display data =
     print_endline route ;
     print_endline "MTWRFSS" ;
     print_endline "\n--\n" ;
-    times |>
-    List.iter
+    times
+    |> List.iter
       (fun ts ->
          List.iter2
            (fun stop t ->
-              if t = "--" then ()
-              else Printf.printf "%s\t\t\t%s\n" stop t)
+              (* -- seems to be a placeholder for when the bus doesn't stop
+                 there but they want to keep the spot in the table; F means
+                 "Flag Stop. Persons wanting to board will have to signal the
+                 bus driver." *)
+              match t with
+              | "--" -> ()
+              | "F" -> print_endline stop
+              | _ -> Printf.printf "%s\t\t\t%s\n" stop t)
            stops ts ;
          print_endline "--") ;
-    print_endline "EOF"
+    print_endline "\n\nEOF"
   in List.iter display' data
 
 let () =

@@ -153,16 +153,16 @@ module Input = struct
     let nexts = Nextmap.create in
     List.iter
       (fun {Route.name = route; days; trails} ->
-         trails |>
-         List.iter
+         trails
+         |> List.iter
            (fun trail ->
               let rst =
                 let rst' = Routestop.of_trail route trail in
-                days |>
-                List.map
+                days
+                |> List.map
                   (fun d ->
-                     rst' |>
-                     List.map
+                     rst'
+                     |> List.map
                        (fun rs -> {rs with Routestop.time = d * 86400 + rs.Routestop.time}))
                 |> List.flatten
               in
@@ -170,7 +170,6 @@ module Input = struct
               Nextmap.update_with nexts rst))
       routes ;
     {stops; nexts}
-
 
 end
 

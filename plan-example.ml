@@ -1,15 +1,17 @@
 open Lwt
 
 let files = [
-  "route-10.route";
-  "route-15.route"
+  "route-10-week.route";
+  "route-15-sat.route";
+  "route-15-sun.route";
+  "route-15-week.route";
 ]
 ;;
 
-Lwt_list.map_p Route.parse_file files >>= fun routes ->
+Lwt_list.map_p Route.parse_file (List.map (( ^ ) "routes/") files) >>= fun routes ->
 let input = Planner.Input.of_routes routes in
 let source = {Planner.Routestop.
-               route="Route 10"; stop="Goldwin Smith Hall"; time=27420} in
+               route="Route 10 Weekdays"; stop="Goldwin Smith Hall"; time=27420} in
 let dest = "Wegmans" in
 return (Planner.plan input source dest)
 ;;

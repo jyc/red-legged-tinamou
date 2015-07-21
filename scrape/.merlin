@@ -2,5 +2,4 @@ S .
 B _build
 
 PKG ezxmlm
-PKG lwt
-PKG lwt.unix
+PKG pcre
