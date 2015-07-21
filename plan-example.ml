@@ -11,7 +11,7 @@ let files = [
 Lwt_list.map_p Route.parse_file (List.map (( ^ ) "routes/") files) >>= fun routes ->
 let input = Planner.Input.of_routes routes in
 let source = {Planner.Routestop.
-               route="Route 10 Weekdays"; stop="Goldwin Smith Hall"; time=27420} in
+               route="Route 10 - Weekdays"; stop="Goldwin Smith Hall"; time=27420} in
 let dest = "Wegmans" in
 return (Planner.plan input source dest)
 ;;
@@ -35,3 +35,8 @@ return (Planner.plan input source dest)
    Unfortunately our bus rider wasn't able to make it to the Seneca @ Commons
    bus stop on Route 15 in time, and had to wait until the next day for the
    next Route 10 to Wegmans. Her total trip time is 24.925 hours. *)
+
+Route.parse_file "routes/route-10-week.route" >|= fun route ->
+let {Planner.Input.stops; nexts} = Planner.Input.of_routes [route] in
+Planner.Nextmap.next nexts
+  {Planner.Routestop.route="Route 10 - Weekdays"; stop="Goldwin Smith Hall"; time=27420}

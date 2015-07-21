@@ -33,27 +33,33 @@ module Routestop = struct
       in (make route a) :: bs
     in
     (* rest is in order, tbd is reversed, det is reversed, return value in order *)
-    let rec routestops_of_route' anchor rest tbd n det =
+    let rec of_trail' anchor rest tbd n det =
       match rest with
       | ({Route.Stop.name = _; time = Some _} as x) :: xs ->
-        routestops_of_route' x xs [] 1 (List.rev_append (adjust_times anchor tbd x n) det)
+        of_trail' x xs [] 1 (List.rev_append (adjust_times anchor tbd x n) det)
       | x :: xs ->
-        routestops_of_route' anchor xs (x :: tbd) (n + 1) det
+        of_trail' anchor xs (x :: tbd) (n + 1) det
       | [] ->
-        List.rev det
+        (match tbd with
+         | [] ->
+           (match anchor with
+            | {Route.Stop.name; time = Some time} ->
+              List.rev ({route; stop = name; time} :: det)
+            | _ -> failwith "Assert failure: anchor time is None")
+         | _ -> failwith "of_trail: The given [trail] could not be determined.")
     in
     let rec circ rest front =
       match rest with
       | {Route.Stop.name = _; time = Some _} :: xs ->
         List.rev_append front rest
       | x :: xs ->
-        circ rest (x :: front)
+        circ xs (x :: front)
       | [] ->
-        failwith "routestops_of_trail: The given [trail] must have at least two specified times."
+        failwith "of_trail: The given [trail] must have at least two specified times."
     in
     let trail = circ trail' [] in
     match trail with
-    | a :: (b :: _ as xs) -> routestops_of_route' a xs [] 1 []
+    | a :: (b :: _ as xs) -> of_trail' a xs [] 1 []
     | _ -> failwith "routestops_of_trail: The given [trail] must have at least two times."
 
 end
@@ -178,13 +184,13 @@ let transit a b =
   let bt = b.Routestop.time in
   (bt - at + week_sec) mod week_sec
 
-let plan {Input.stops; nexts} source dest =
+let plan ?(stop_switch_cost=60) {Input.stops; nexts} source dest =
   let visited_ht = Hashtbl.create 1 in
   let visited = Hashtbl.mem visited_ht in
   let mark_visited n = Hashtbl.replace visited_ht n () in
   let paths = Hashtbl.create 1 in
   let frontier = ref PQueue.empty in
-  let consider a (path, t') b =
+  let consider a (path, t') (b, transit) =
     if visited b then () else begin
       let t = t' + (transit a b) in
       let inf_dist = not (Hashtbl.mem paths b) in
@@ -200,14 +206,30 @@ let plan {Input.stops; nexts} source dest =
       else find_dest xs
     | [] -> None
   in
-  let rec visit n =
-    if visited n then failwith "visit: Node already visited."
+  let rec visit_next () =
+    match PQueue.extract (!frontier) with
+    | Some (t, n, frontier') ->
+      frontier := frontier' ;
+      visit n
+    | None -> None
+  and visit n =
+    (* This can happen if a neighbor is both a next and at the same stop.
+       We try to minimize it but this seems to me the cleanest way to deal with
+       that possibility so far. *)
+    if visited n then visit_next ()
     else begin
       mark_visited n ;
-      let neighbors =
+      let stop_neighbors = Stopmap.at stops n.Routestop.stop in
+      let next_neighbors =
         match Nextmap.next nexts n with
-        | Some x -> x :: Stopmap.at stops n.Routestop.stop
-        | None -> Stopmap.at stops n.Routestop.stop
+        | Some x -> [x]
+        | None -> []
+      in
+      let neighbors = next_neighbors @ stop_neighbors in
+      let neighbors_t = (next_neighbors
+                         |> List.map (fun x -> (x, transit))) @
+                        (stop_neighbors
+                         |> List.map (fun x -> (x, (fun a b -> transit a b + stop_switch_cost))))
       in
       match find_dest neighbors with
       | Some x ->
@@ -215,14 +237,9 @@ let plan {Input.stops; nexts} source dest =
         Some (List.rev (x :: n :: path'), t' + (transit n x))
       | None ->
         let path, t' = Hashtbl.find paths n in
-        List.iter (consider n (n :: path, t')) neighbors ;
+        List.iter (consider n (n :: path, t')) neighbors_t ;
         if (!frontier) = PQueue.empty then None
-        else
-          match PQueue.extract (!frontier) with
-          | Some (t, n', frontier') ->
-            frontier := frontier' ;
-            visit n'
-          | None -> None
+        else visit_next ()
     end
   in
   Hashtbl.replace paths source ([], 0) ;
