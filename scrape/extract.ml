@@ -39,17 +39,20 @@ let parse_table x =
            | `El (_, [`Data x]) -> x :: a
            | _ -> a)
         [] stop_els
+      |> List.rev
     in
     let times =
       List.fold_left
         (fun a l ->
            (List.fold_left
-             (fun a' l' ->
-                match l' with
-                | `El (_, [`Data x]) -> x :: a'
-                | _ -> a')
-             [] l) :: a)
+              (fun a' l' ->
+                 match l' with
+                 | `El (_, [`Data x]) -> x :: a'
+                 | _ -> a')
+              [] l
+            |> List.rev) :: a)
         [] rest_els
+      |> List.rev
     in
     {route; stops; times}
   | _ -> failwith "Failed to find expected trs (stop names and stops)."

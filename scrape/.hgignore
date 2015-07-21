@@ -1,0 +1,4 @@
+syntax: glob
+
+in.html
+out.xml
