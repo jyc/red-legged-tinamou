@@ -1,2 +1,2 @@
-true: package(ezxmlm), package(pcre) \
+true: package(ezxmlm), package(pcre), \
     safe_string

@@ -37,21 +37,21 @@ let fold_data els =
 let ampm_rex = Pcre.regexp "([0-9]+):([0-9]+)\\s*(AM|PM)"
 
 let mil_of_ampm s = 
-  let m = Pcre.exec ~rex:ampm_rex s in
+  try let m = Pcre.exec ~rex:ampm_rex s in
   match Pcre.get_substrings m ~full_match:false with
   | [| hs; ms; ps |] -> 
     let h = int_of_string hs in
     let m = int_of_string ms in
     let hoff =
       (* TCAT seems to use 12:00 PM for noon *)
+      (if h = 12 then -12 else 0) +
       match ps with
-      | "AM" when h = 12 -> -12
-      | "PM" when h = 12 -> 12
       | "AM" -> 0
       | "PM" -> 12
       | _ -> failwith (Printf.sprintf "Unrecognized period: %s" ps)
     in Printf.sprintf "%02d:%02d" (h + hoff) m
-  | _ -> failwith "Failed to parse time, expected e.g. 1:37 AM"
+  | _ -> failwith ("Failed to parse time: " ^ s)
+  with Not_found -> s
 
 let parse_table x =
   let route =
@@ -73,13 +73,12 @@ let parse_table x =
 
 let validate {route = _; stops; times} =
   let nstops = List.length stops in
-  List.iter
+  times
+  |> List.iter
     (fun l ->
        if List.length l <> nstops then
          failwith "Number of times doesn't match number of stops."
-       else
-         ())
-    times
+       else ())
 
 let display data =
   let display' {route; stops; times} =
@@ -101,7 +100,7 @@ let display data =
               | _ -> Printf.printf "%s\t\t\t%s\n" stop t)
            stops ts ;
          print_endline "--") ;
-    print_endline "\n\nEOF"
+    print_endline "\nEOF"
   in List.iter display' data
 
 let () =
