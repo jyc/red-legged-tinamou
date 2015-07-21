@@ -77,10 +77,8 @@ let display data =
       (fun ts ->
          List.iter2
            (fun stop t ->
-              if t = "--" then
-                print_endline stop
-              else
-                Printf.printf "%s\t\t\t%s\n" stop t)
+              if t = "--" then ()
+              else Printf.printf "%s\t\t\t%s\n" stop t)
            stops ts ;
          print_endline "--") ;
     print_endline "EOF"
