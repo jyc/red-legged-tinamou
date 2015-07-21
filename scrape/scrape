@@ -1,0 +1,5 @@
+#!/bin/bash
+
+wget $1 -O in.html
+xmllint --html --xmlout in.html > out.xml
+./extract.native out.xml

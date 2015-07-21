@@ -153,26 +153,31 @@ module Input = struct
     let nexts = Nextmap.create in
     List.iter
       (fun {Route.name = route; days; trails} ->
+         trails |>
          List.iter
            (fun trail ->
               let rst =
                 let rst' = Routestop.of_trail route trail in
+                days |>
                 List.map
                   (fun d ->
+                     rst' |>
                      List.map
-                       (fun rs -> {rs with Routestop.time = d * 86400 + rs.Routestop.time})
-                       rst')
-                  days
+                       (fun rs -> {rs with Routestop.time = d * 86400 + rs.Routestop.time}))
                 |> List.flatten
               in
               Stopmap.update_with stops rst ;
-              Nextmap.update_with nexts rst)
-           trails)
+              Nextmap.update_with nexts rst))
       routes ;
     {stops; nexts}
 
 
 end
+
+let transit a b =
+  let at = a.Routestop.time in
+  let bt = b.Routestop.time in
+  (bt - at + week_sec) mod week_sec
 
 let plan {Input.stops; nexts} source dest =
   let visited_ht = Hashtbl.create 1 in
@@ -180,11 +185,6 @@ let plan {Input.stops; nexts} source dest =
   let mark_visited n = Hashtbl.replace visited_ht n () in
   let paths = Hashtbl.create 1 in
   let frontier = ref PQueue.empty in
-  let transit a b =
-    let at = a.Routestop.time in
-    let bt = b.Routestop.time in
-    (bt - at + week_sec) mod week_sec
-  in
   let consider a (path, t') b =
     if visited b then () else begin
       let t = t' + (transit a b) in
