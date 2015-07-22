@@ -80,7 +80,6 @@ let validate {route = _; stops; times} =
          failwith "Number of times doesn't match number of stops."
        else
          ())
-    times
 
 let display data =
   let display' {route; stops; times} =
