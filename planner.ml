@@ -157,25 +157,20 @@ module Input = struct
   let of_routes routes =
     let stops = Stopmap.create in
     let nexts = Nextmap.create in
-    List.iter
+    routes
+    |> List.iter
       (fun {Route.name = route; days; trails} ->
          trails
          |> List.iter
            (fun trail ->
-              let rst =
-                let rst' = Routestop.of_trail route trail in
-                days
-                |> List.map
-                  (fun d ->
-                     rst'
-                     |> List.map
-                       (fun rs -> {rs with Routestop.time = d * 86400 + rs.Routestop.time}))
-                |> List.flatten
-              in
-              Stopmap.update_with stops rst ;
-              Nextmap.update_with nexts rst))
-      routes ;
-    {stops; nexts}
+              let rs = Routestop.of_trail route trail in
+              days
+              |> List.iter
+                (fun d ->
+                   let rs' = List.map (fun rs -> {rs with Routestop.time = d * 86400 + rs.Routestop.time}) rs in
+                   Stopmap.update_with stops rs' ;
+                   Nextmap.update_with nexts rs'))) ;
+      {stops; nexts}
 
 end
 
