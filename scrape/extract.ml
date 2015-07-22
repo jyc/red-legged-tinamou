@@ -78,7 +78,9 @@ let validate {route = _; stops; times} =
     (fun l ->
        if List.length l <> nstops then
          failwith "Number of times doesn't match number of stops."
-       else ())
+       else
+         ())
+    times
 
 let display data =
   let display' {route; stops; times} =
